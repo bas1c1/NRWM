@@ -1,0 +1,10 @@
+[package]
+name = "nrwm"
+version = "0.0.1"
+edition = "2021"
+keywords = ["x11"]
+
+[dependencies]
+xcb = "0.10"
+x11 = { version = "2.19.2", features = ["xlib"] }
+lazy_static = "1.4"
