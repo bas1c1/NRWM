@@ -1,6 +1,6 @@
 set -e
 
-cargo build --release
+cargo +nightly build --release
 cp target/release/nrwm .
 
 XEPHYR=$(command -v Xephyr)
