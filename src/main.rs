@@ -136,12 +136,7 @@ fn unmapNotifyFunc(disp: *mut Display, e: xlib::XEvent) {
 		let ev = e.map_request;
 
 		if wpoint >= 1 && wpoint <= windows.len() as i32 {
-			//let check = |x: &mut xlib::Window| *x == windows[(wpoint-1) as usize];
-			println!("wp {} ws {}", wpoint-1, windows.len());
-			//windows.pop_if(check);
-			//for
-			windows.remove((wpoint-1) as usize); 
-			println!("wp {} ws {}", wpoint-1, windows.len());
+			windows.remove((wpoint-1) as usize);
 		}
 			
 		if wpoint - 1 >= 1 {
