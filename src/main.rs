@@ -13,7 +13,7 @@ use std::os::raw::{c_char, c_ulong, c_uchar};
 const cevents: i64 = xlib::SubstructureNotifyMask | xlib::StructureNotifyMask | xlib::KeyPressMask | xlib::KeyReleaseMask |
 		     xlib::ButtonPressMask | xlib::ButtonReleaseMask;
 
-static mut wpoint: i32 = -1;
+static mut wpoint: i32 = 0;
 static mut windows: Vec<xlib::Window> = Vec::new();
 
 const panel_hei: u32 = 50;
@@ -64,7 +64,7 @@ fn main() {
 					
 					match e.key.keycode {
 						11 => {
-							if wpoint + 1 < windows.len().try_into().unwrap() {	
+							if wpoint + 1 <= windows.len() as i32 {	
 								wpoint += 1;
 							}
 
@@ -72,7 +72,7 @@ fn main() {
 						}
 						
 						10 => {
-							if wpoint - 1 >= 0 {
+							if wpoint - 1 >= 1 {
 								wpoint -= 1;
 							}
 
@@ -134,24 +134,34 @@ fn mapNotifyFunc(disp: *mut Display, e: xlib::XEvent) {
 fn unmapNotifyFunc(disp: *mut Display, e: xlib::XEvent) {
 	unsafe {
 		let ev = e.map_request;
-		let check = |x: &mut xlib::Window| *x == windows[wpoint as usize];
-		
-		windows.pop_if(check);
-		
-		if wpoint - 1 >= 0 {
+
+		if wpoint >= 1 && wpoint <= windows.len() as i32 {
+			//let check = |x: &mut xlib::Window| *x == windows[(wpoint-1) as usize];
+			println!("wp {} ws {}", wpoint-1, windows.len());
+			//windows.pop_if(check);
+			//for
+			windows.remove((wpoint-1) as usize); 
+			println!("wp {} ws {}", wpoint-1, windows.len());
+		}
+			
+		if wpoint - 1 >= 1 {
 			wpoint -= 1;
 			showWindow(disp);
 		} else {
-			wpoint = 0;
+			if (windows.len() as i32) == 0 {
+				wpoint = 0;
+			} else {
+				wpoint = 1;
+			}
 		}
 	}
 }
 
 fn showWindow(disp: *mut Display) {
 	unsafe {
-		if wpoint >= 0 {
-			let wnd = windows[wpoint as usize];
-
+		if wpoint >= 1 && wpoint < windows.len() as i32 {
+			let wnd = windows[(wpoint-1) as usize];
+			
 			let screen = xlib::XDefaultScreen(disp);
 
                 	let wid: u32 = xlib::XDisplayWidth(disp, screen).try_into().unwrap();
@@ -191,6 +201,8 @@ fn updatePanel(disp: *mut Display, root_: c_ulong, wnd: xlib::Window) {
 		let black = xlib::XBlackPixel(disp, screen);
 		let white = xlib::XWhitePixel(disp, screen);
 		let gc = xlib::XCreateGC(disp, wnd, 0, std::ptr::null_mut());
+		let halfwid: i32 = (wid/2).try_into().unwrap();
+
 		xlib::XSetBackground(disp, gc, black);
 		xlib::XSetForeground(disp, gc, black);
 		xlib::XFillRectangle(disp, wnd, gc, 0, 0, wid.try_into().unwrap(), 50);
