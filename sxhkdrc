@@ -1,2 +1,2 @@
 ctrl + b
-    xterm
+    xterm -background black -foreground white

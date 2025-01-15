@@ -1,4 +1,4 @@
 #!/bin/sh
 
-sxhkd && sleep 2 &
+sxhkd -c ./sxhkdrc && sleep 2 &
 exec ./nrwm

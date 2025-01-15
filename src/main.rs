@@ -16,6 +16,8 @@ const cevents: i64 = xlib::SubstructureNotifyMask | xlib::StructureNotifyMask | 
 static mut wpoint: i32 = -1;
 static mut windows: Vec<xlib::Window> = Vec::new();
 
+const panel_hei: u32 = 50;
+
 fn main() {
 	let disp = unsafe { xlib::XOpenDisplay(std::ptr::null()) };
 
@@ -44,11 +46,18 @@ fn main() {
 	
 		xlib::XSync(disp, 0);
 
+		let panel = createPanel(disp, _root);
+
+		let mut flag = true;
+
 		let mut e: xlib::XEvent = MaybeUninit::uninit().assume_init();
 		
 		loop {
 			xlib::XNextEvent(disp, &mut e as *mut xlib::XEvent);
-
+			if flag && e.type_ == 19 {
+				flag = false;
+				continue;
+			}
 			match e.type_ {
 				2 => {
 					//println!("Key: { }", e.key.keycode);
@@ -82,9 +91,11 @@ fn main() {
 				}
 	
 				_always=> {
-					println!("Unexpected: { }", e.type_);
+					println!("Code: { }", e.type_);
 				}
 			}
+			
+			updatePanel(disp, _root, panel);
 		}
 
 		xlib::XCloseDisplay(disp);
@@ -113,8 +124,8 @@ fn mapNotifyFunc(disp: *mut Display, e: xlib::XEvent) {
 		let hei: u32 = xlib::XDisplayHeight(disp, screen).try_into().unwrap();		
 
                 xlib::XRaiseWindow(disp, ev.window);
-                //xlib::XSetInputFocus(disp, ev.window, xlib::RevertToPointerRoot, xlib::CurrentTime);
-                xlib::XMoveResizeWindow(disp, ev.window, 0, 0, wid-1, hei-1);
+
+                xlib::XMoveResizeWindow(disp, ev.window, 0, (panel_hei+4).try_into().unwrap(), wid-1, hei-1);
 
                 xlib::XMapWindow(disp, ev.window);
         }
@@ -138,16 +149,52 @@ fn unmapNotifyFunc(disp: *mut Display, e: xlib::XEvent) {
 
 fn showWindow(disp: *mut Display) {
 	unsafe {
-		println!("WPOINT {}", wpoint);
-		let wnd = windows[wpoint as usize];
+		if wpoint >= 0 {
+			let wnd = windows[wpoint as usize];
 
+			let screen = xlib::XDefaultScreen(disp);
+
+                	let wid: u32 = xlib::XDisplayWidth(disp, screen).try_into().unwrap();
+                	let hei: u32 = xlib::XDisplayHeight(disp, screen).try_into().unwrap();
+
+                	xlib::XRaiseWindow(disp, wnd);
+		}
+	}
+}
+
+fn createWindow(disp: *mut Display, root_: c_ulong, w: i32, h: i32, x: i32, y: i32) -> xlib::Window {
+	unsafe {
 		let screen = xlib::XDefaultScreen(disp);
+		let wnd = xlib::XCreateSimpleWindow(disp, root_, x, y, w.try_into().unwrap(), h.try_into().unwrap(), 2, xlib::XWhitePixel(disp, screen), xlib::XBlackPixel(disp, screen));
 
-                let wid: u32 = xlib::XDisplayWidth(disp, screen).try_into().unwrap();
-                let hei: u32 = xlib::XDisplayHeight(disp, screen).try_into().unwrap();
+		xlib::XMapWindow(disp, wnd);
+		xlib::XRaiseWindow(disp, wnd);
+		return wnd;
+	}
+}
 
-                xlib::XRaiseWindow(disp, wnd);
-                //xlib::XSetInputFocus(disp, ev.window, xlib::RevertToPointerRoot, xlib::CurrentTime);
-                xlib::XMoveResizeWindow(disp, wnd, 0, 0, wid-1, hei-1);
+fn createPanel(disp: *mut Display, root_: c_ulong) -> xlib::Window {
+	unsafe {
+		let screen = xlib::XDefaultScreen(disp);
+		let wid: i32 = xlib::XDisplayWidth(disp, screen).try_into().unwrap();
+		let wnd = createWindow(disp, root_, 1, 1, 0, 0);
+
+		xlib::XMoveResizeWindow(disp, wnd, 0, 0, (wid-4).try_into().unwrap(), panel_hei);
+		return wnd;
+	}
+}
+
+fn updatePanel(disp: *mut Display, root_: c_ulong, wnd: xlib::Window) {
+	unsafe {
+		let screen = xlib::XDefaultScreen(disp);
+		let wid: i32 = xlib::XDisplayWidth(disp, screen).try_into().unwrap();
+		let black = xlib::XBlackPixel(disp, screen);
+		let white = xlib::XWhitePixel(disp, screen);
+		let gc = xlib::XCreateGC(disp, wnd, 0, std::ptr::null_mut());
+		xlib::XSetBackground(disp, gc, black);
+		xlib::XSetForeground(disp, gc, black);
+		xlib::XFillRectangle(disp, wnd, gc, 0, 0, wid.try_into().unwrap(), 50);
+                xlib::XSetForeground(disp, gc, white);
+		xlib::XDrawString(disp, wnd, gc, halfwid-5, 25, (wpoint.to_string()+"\0").as_ptr() as *const i8, 1);
 	}
 }
